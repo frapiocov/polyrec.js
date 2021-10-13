@@ -1,0 +1,376 @@
+<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>PolyRec.js</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#10067;</text></svg>">
+    <link href="styles.css" rel="stylesheet" type="text/css" />
+    <script type="text/javascript" src="./jquery-1.7.2.min.js"></script>
+    <script type="text/javascript" src="polyrec.min.js"></script>
+    <script type="text/javascript">
+        /* Canvas function */
+        var _isDown, _points, _r, _g, _rc;
+        var results, add_points;
+        function onLoadEvent()
+        {
+            /* results = document.getElementById('results');
+            results.innerHTML += 'new Array('; */
+            _points = new Array();
+            _r = new PolyRecognizer(true); //new PolyRec istance
+            //canvas with all the stroke attributes
+            var canvas = document.getElementById('myCanvas');
+            _g = canvas.getContext('2d');
+            _g.fillStyle = "rgb(0,0,0)";
+            _g.strokeStyle = "rgb(0,0,0)";
+            _g.lineWidth = 3;
+            _g.font = "1.1rem Poppins";
+            _rc = getCanvasRect(canvas); // canvas rect on page
+            _g.fillStyle = "#fff";
+            _g.fillRect(0, 0, _rc.width, 20);
+            
+            _isDown = false;
+        }
+        function getCanvasRect(canvas)
+        {
+            var w = canvas.width;
+            var h = canvas.height;
+            
+            var cx = canvas.offsetLeft;
+            var cy = canvas.offsetTop;
+            while (canvas.offsetParent != null)
+            {
+                canvas = canvas.offsetParent;
+                cx += canvas.offsetLeft;
+                cy += canvas.offsetTop;
+            }
+            return {x: cx, y: cy, width: w, height: h};
+        }
+        function getScrollX()
+        {
+            var scrollX = $(window).scrollLeft();
+            return scrollX;
+        }
+        function getScrollY()
+        {
+            var scrollY = $(window).scrollTop();
+            return scrollY;
+        }
+        /* Mouse Event */
+        function mouseDownEvent(x, y, button)
+        {
+            document.onselectstart = function() { return false; } // disable drag-select
+            document.onmousedown = function() { return false; } // disable drag-select
+            /* results.innerHTML = 'new Array(' */
+
+            add_points = new Array();
+
+            if (button <= 1)
+            {
+                _isDown = true;
+                x -= _rc.x - getScrollX();
+                y -= _rc.y - getScrollY();
+                if (_points.length > 0)
+                _g.clearRect(0, 0, _rc.width, _rc.height);
+                _points.length = 1; // clear points
+                _points[0] = new Point(x, y);
+                add_points.push(new Point(x,y));
+               /*  results.innerHTML += 'new Point(' + x + ', ' + Math.trunc(y) + '), '  */
+                drawText("Recording gesture...");
+                _g.fillRect(x - 4, y - 3, 9, 9);
+            }
+            else if (button == 2)
+            {
+                drawText("Recognizing gesture...");
+            }
+        }
+        function mouseMoveEvent(x, y, button)
+        {
+            if (_isDown)
+            {
+                x -= _rc.x - getScrollX();
+                y -= _rc.y - getScrollY();
+                _points[_points.length] = new Point(x, y); // append
+                add_points.push(new Point(x,y));
+                /* results.innerHTML += 'new Point(' + x + ', ' + Math.trunc(y) + '), '  */
+                drawConnectedPoint(_points.length - 2, _points.length - 1);
+            }
+        }
+        function mouseUpEvent(x, y, button)
+        {
+            document.onselectstart = function() { return true; } // enable drag-select
+            document.onmousedown = function() { return true; } // enable drag-select
+            if (_isDown || button == 2)
+            {
+                _isDown = false;
+                if (_points.length >= 10)
+                {
+                    var result = _r.Recognize(_points);
+                    drawText("Result: " + result.Name + " with score: " + round(result.Score,2) + " in " + result.Time + " ms.");
+                }
+                else // fewer than 10 points were inputted
+                {
+                    drawText("Too few points made. Please try again.");
+                }
+            }
+        }
+        function drawText(str)
+        {
+            _g.fillStyle = "#fff";
+            _g.fillRect(0, 0, _rc.width, 20);
+            _g.fillStyle = "rgb(0,0,0)";
+            _g.fillText(str, 1, 14);
+        }
+        function drawConnectedPoint(from, to)
+        {
+            _g.beginPath();
+            _g.moveTo(_points[from].X, _points[from].Y);
+            _g.lineTo(_points[to].X, _points[to].Y);
+            _g.closePath();
+            _g.stroke();
+        }
+        function round(n, d) // round 'n' to 'd' decimals
+        {
+            d = Math.pow(10, d);
+            return Math.round(n * d) / d;
+        }
+        
+        /* Gesture Adding and Clearing */
+        function onClickAddExisting()
+        {
+            if (add_points.length >= 10)
+            {
+                var unistrokes = document.getElementById('unistrokes');
+                var name = unistrokes[unistrokes.selectedIndex].value;
+                var num = _r.AddTemplate(name, add_points);
+                drawText("\"" + name + "\" added. No. of \"" + name + "\" defined: " + num + ".");
+            }
+        }
+        function onClickAddCustom()
+        {
+            var name = document.getElementById('custom').value;
+            if (add_points.length >= 10 && name.length > 0)
+            {
+                var num = _r.AddTemplate(name, add_points);
+                drawText("\"" + name + "\" added. " + num);
+            }
+        }
+        function onClickCustom()
+        {
+            document.getElementById('custom').select();
+        }
+        function onClickDelete()
+        {
+            var num = _r.DeleteUserGestures(); // deletes any user-defined unistrokes
+            drawText("All gestures have been deleted");
+        }
+    </script>
+</head>
+<body onload="onLoadEvent()">
+    
+    <div id="Mast">
+        <h1>PolyRec.JS: Gesture Recognizer</h1>
+    </div>
+    <div id="Content">
+        <div  class="description">
+            <p>
+                The <b>PolyRec Recognizer</b> is a unistroke gesture recognizer suitable for fast prototyping of gesture-based applications. The recognizer uses a nearest neighbor approach, and requires a small number of samples for each class.
+                <br><br>
+                The similarity between two gestures is calculated through a <b>three steps procedure</b>:<br>
+                - firstly, each gesture is approximated to a <b>polyline</b>, in order to extract its main movements;<br>
+                - then, the two polylines are aligned to obtain an equal number of segments from both of them;<br>
+                - lastly, the distance is found by summing the <b>contribution of each pair of segments</b>.
+                <br><br>
+                This implementation, in JavaScript, for a thesis work, is a prototype developed for scientific purposes and web uses.
+                More technical details on PolyRec can be found in the following scientific paper <a href="http://dl.acm.org/citation.cfm?id=2702505">here</a>:<br>
+                <i>V Fuccella, G. Costagliola; Unistroke Gesture Recognition Through Polyline Approximation and Alignment; in Proceedings of CHI 2015; pp. 3351-3354</i>
+                <br><br>
+                <h3>Useful Links</h3>
+                <ol>
+                    <li>Source code Complete Project: <a target="_blank" href="https://gitlab.com/cluelab/tesi/polyrecjs/polyrec-js">Here</a><br></li>
+                    <li>Source code (minified) JavaScript: <a download="" href="polyrec.min.js">Here</a><br></li>
+                    <li>Source code (not minified) JavaScript: <a target="_blank" download="" href="polyrec.js">Here</a><br></li>
+                    <li>Source code (GitHub Repository): Java <a href="https://github.com/cluelab/polyrec">Here</a><br></li>
+                    <li>Gesture dataset logs XML: <a download="" href="data.rar">here</a><br/></li>
+                    <li>Paper PDF: <a download="" href="paper_polyrec.pdf">here</a><br></li>
+                </ol>
+                <p class="license">This software is distributed under the <a href="http://en.wikipedia.org/wiki/BSD_licenses#3-clause_license_.28.22Revised_BSD_License.22.2C_.22New_BSD_License.22.2C_or_.22Modified_BSD_License.22.29">New BSD License</a> agreement.</p>
+            </p>        
+        </div>
+        <h2 id="demo">DEMO</h2>
+        <div  class="description">
+            In the demo below, only one gesture template is loaded for each of the 16 gesture types. 
+            You can add additional gestures as you wish, and even define your own custom gestures.
+            <!-- Gesture image and canvas -->
+            <table border="0" cellspacing="10">
+                <tr>
+                    <td valign="top">
+                        <div class="cards">
+                            <div class="card">
+                                <img src="img/arrow.jpg" alt="">
+                                <p>1. Arrow</p>
+                            </div>
+                            <div class="card">
+                                <img src="img/caret.jpg" alt="">
+                                <p>2. Caret</p>
+                            </div>
+                            <div class="card">
+                                <img src="img/check.jpg" alt="">
+                                <p>3. Check</p>
+                            </div>
+                            <div class="card">
+                                <img src="img/circle.jpg" alt="">
+                                <p>4. Circle</p>
+                            </div>
+                            <div class="card">
+                                <img src="img/delete_mark.jpg" alt="">
+                                <p>5. Delete Mark</p>
+                            </div>
+                            <div class="card">
+                                <img src="img/left_curly_brace.jpg" alt="">
+                                <p>6. Left Curly Bracket</p>
+                            </div>
+                            <div class="card">
+                                <img src="img/right_curly_brace.jpg" alt="">
+                                <p>7. Right Curly Bracket</p>
+                            </div>
+                            <div class="card">
+                                <img src="img/left_sq_bracket.jpg" alt="">
+                                <p>8. Left Square Bracket</p>
+                            </div>
+                            <div class="card">
+                                <img src="img/right_sq_bracket.jpg" alt="">
+                                <p>9. Right Square Bracket</p>
+                            </div>
+                            <div class="card">
+                                <img src="img/pigtail.jpg" alt="">
+                                <p>10. Pigtail</p>
+                            </div>
+                            <div class="card">
+                                <img src="img/question_mark.jpg" alt="">
+                                <p>11. Question Mark</p>
+                            </div>
+                            <div class="card">
+                                <img src="img/rectangle.jpg" alt="">
+                                <p>12. Rectangle</p>
+                            </div>
+                            <div class="card">
+                                <img src="img/star.jpg" alt="">
+                                <p>13. Star</p>
+                            </div>
+                            <div class="card">
+                                <img src="img/triangle.jpg" alt="">
+                                <p>14. Triangle</p>
+                            </div>
+                            <div class="card">
+                                <img src="img/v.jpg" alt="">
+                                <p>15. "V"</p>
+                            </div>
+                            <div class="card">
+                                <img src="img/x.jpg" alt="">
+                                <p>16. "X"</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="text-align: center;" valign="top" align="left">
+                        <p class="top_canvas">
+                            Make strokes on this canvas. If a misrecognition occurs,
+                            add the misrecognized unistroke as an example of the intended gesture.
+                        </p>
+                        <canvas id="myCanvas" width="440" height="420" style="background-color:#ccc; border-radius: 7px;"
+                        onmousedown="mouseDownEvent(event.clientX, event.clientY, event.button)"
+                        onmousemove="mouseMoveEvent(event.clientX, event.clientY, event.button)"
+                        onmouseup="mouseUpEvent(event.clientX, event.clientY, event.button)"
+                        oncontextmenu="return false;">
+                        <span style="background-color:#ce164d;">The &lt;canvas&gt; element is not supported by this browser.</span>
+                    </canvas>
+                    <div>
+                        <div class="btns">
+                            <label for="unistrokes">Add as example of existing type </label>
+                            <select class="text_area" id="unistrokes" style="width:136px" onkeypress="if (event.keyCode == 13) onClickAddExisting()">
+                                <option selected value="triangle">triangle</option>
+                                <option value="x">x</option>
+                                <option value="rectangle">rectangle</option>
+                                <option value="circle">circle</option>
+                                <option value="check">check</option>
+                                <option value="caret">caret</option>
+                                <option value="question_mark">Question mark</option>
+                                <option value="arrow">arrow</option>
+                                <option value="left_sq_bracket">left square bracket</option>
+                                <option value="right_sq_bracket">right square bracket</option>
+                                <option value="v">v</option>
+                                <option value="delete_mark">delete mark</option>
+                                <option value="left_curly_brace">left curly brace</option>
+                                <option value="right_curly_brace">right curly brace</option>
+                                <option value="star">star</option>
+                                <option value="pigtail">pigtail</option>
+                            </select>
+                            <input type="button" class="button" value="Add" onclick="onClickAddExisting()">
+                        </div>
+                        <div class="btns">
+                            <label for="custom">Add new template:</label>
+                            <input id="custom" class="text_area" name="custom" type="text" onclick="onClickCustom()" onkeypress="if (event.keyCode == 13) onClickAddCustom()" placeholder="gesture name..."/>
+                            <input type="button" class="button" value="Add" onclick="onClickAddCustom()" />
+                        </div>
+                        <div class="btns">
+                            <label for="delete_gesture">Delete all gestures</label>
+                            <input id="delete_gesture" type="button" class="button" value="Delete" onclick="onClickDelete()">
+                        </div>
+                    </div>    
+                </td>
+            </tr>
+        </table>
+        <div>
+            <p id="results"></p>
+        </div>
+    </div>
+    
+    <h2>References</h2>
+    <div class="description">
+        <ol>
+            <li>
+                Costagliola, G., Fuccella, V., and Di Capua, M.
+                Interpretation of strokes in radial menus: The case of the
+                keyscretch text entry method. JVLC 24, 4 (2013), 234 –
+                247
+            </li>
+            <li>
+                Douglas, D., and Peucker, T. Algorithms for the
+                reduction of the number of points required to represent a
+                digitized line or its caricature. The Canadian
+                Cartographer 10, 2 (1973), 112–122.
+            </li>
+            <li>
+                Fuccella, V., De Rosa, M., and Costagliola, G. Novice
+                and expert performance of keyscretch: A gesture-based
+                text entry method for touch-screens. IEEE THMS 44, 4
+                (2014), 511–523
+            </li>
+            <li>
+                Li, Y. Protractor: A fast and accurate gesture recognizer.
+                In Proc. of CHI ’10, ACM (2010), 2169–2172.
+            </li>
+            <li>
+                Needleman, S. B., and Wunsch, C. D. A general method
+                applicable to the search for similarities in the amino acid
+                sequence of two proteins. Journal of Molecular Biology
+                48, 3 (1970), 443–453.
+            </li>
+            <li>
+                Wobbrock, J. O., Wilson, A. D., and Li, Y. Gestures
+                without libraries, toolkits or training: A $1 recognizer
+                for user interface prototypes. In Proc. of UIST ’07, ACM
+                (2007), 159–168.
+            </li>
+        </ol>
+    </div>
+    
+    <br/>
+    <p style="font-size:0.8rem;text-align:center">
+        Copyright &copy; 2021 All rights reserved. <br/>
+        Last updated September, 2021.
+    </p>
+    <br/>
+    
+</div>
+</body>
+</html>

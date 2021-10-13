@@ -12,15 +12,14 @@ The similarity between two gestures is calculated through a three steps procedur
 - lastly, the distance is found by summing the contribution of each pair of segments.
 
 This implementation, in JavaScript, for a thesis work, is a prototype developed for scientific purposes and web uses.
-A simple demo for the PolyRec recognizer [here](example/demo2/index.html). 
-The second demo is a little more complex, it allows you to write Java code through the use of gestures. A small server written in Node.js takes care of compiling and running the code. It's visible here [here](example/demo3/index.html). 
+A simple demo for the PolyRec recognizer [here](https://frapiocov.github.io/polyrec.js/demo). 
 More technical details on PolyRec can be found in the following scientific paper:
 V Fuccella, G. Costagliola; Unistroke Gesture Recognition Through Polyline Approximation and Alignment; in Proceedings of CHI 2015; pp. 3351-3354
 http://dl.acm.org/citation.cfm?id=2702505 
 
 ### Download & Setup
 
-The javascript version can be downloaded as a polyrec.min.js file, a single minimized file to be included in your web applications, for client-side use without server-side processing. 
+The javascript version can be downloaded as the [polyrec.min.js](polyrec.min.js) file, a single minimized file to be included in your web applications, for client-side use without server-side processing. 
 You can use the dataset provided by default or add more gesture with the function `recognizer.AddTemplate(gesture_name, gesture_points)`.
 
 ### Usage: PolyRec.js library

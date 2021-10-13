@@ -30,6 +30,20 @@
             
             _isDown = false;
         }
+        
+        /* Listener for screen size variation */
+        window.addEventListener('resize', function(event){
+            var canvas = document.getElementById('myCanvas');
+            _g = canvas.getContext('2d');
+            _g.fillStyle = "rgb(0,0,0)";
+            _g.strokeStyle = "rgb(0,0,0)";
+            _g.lineWidth = 3;
+            _g.font = "1.1rem Poppins";
+            _rc = getCanvasRect(canvas); // canvas rect on page
+            _g.fillStyle = "#fff";
+            _g.fillRect(0, 0, _rc.width, 20);
+        });
+
         function getCanvasRect(canvas)
         {
             var w = canvas.width;
